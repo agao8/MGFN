@@ -181,6 +181,7 @@ class mgfn(nn.Module):
 
         self.to_mag = nn.Conv1d(1, init_dim, kernel_size=3, stride=1, padding=1)
     def forward(self, video):
+        
         k = 3
         bs, ncrops, t, c = video.size()
         x = video.view(bs * ncrops, t, c).permute(0, 2, 1)
@@ -189,7 +190,6 @@ class mgfn(nn.Module):
         x_f = self.to_tokens(x_f)
         x_m = self.to_mag(x_m)
         x_f = x_f+args.mag_ratio*x_m
-
         for backbone, conv in self.stages:
             x_f = backbone(x_f)
             if exists(conv):
@@ -201,4 +201,39 @@ class mgfn(nn.Module):
         score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
 
         return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
+
+    def forward1(self, video):
+        k = 3
+        bs, ncrops, t, c = video.size()
+        x = video.view(bs * ncrops, t, c).permute(0, 2, 1)
+        x_f = x[:,:2048,:]
+        x_m = x[:,2048:,:]
+        x_f = self.to_tokens(x_f)
+        x_m = self.to_mag(x_m)
+        x_f = x_f+args.mag_ratio*x_m
+
+        return x_f, k, bs, ncrops
+
+    def get_stages(self):
+        return self.stages
+
+    def forward2(self, x_f, backbone, conv):
+        x_f = backbone(x_f)
+        if exists(conv):
+            x_f = conv(x_f)
+        return x_f
+
+    def forward3(self, x_f, backbone, conv, k, bs, ncrops):
+        x_f = backbone(x_f)
+        
+        x_f_ = x_f.permute(0, 2, 1)
+        x = self.to_logits(x_f_)
+        scores = self.sigmoid(self.fc(x))
+        score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
+
+        if exists(conv):
+            x_f = conv(x_f)
+
+        return x_f, score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
+
 

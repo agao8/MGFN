@@ -14,6 +14,8 @@ from datasets.dataset import Dataset
 from train import train
 from test import test
 import datetime
+import os
+import random
 
 def save_config(save_path):
     path = save_path+'/'
@@ -34,17 +36,26 @@ except RuntimeError:
 
 
 if __name__ == '__main__':
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
     args=option.parse_args()
     config = Config(args)
+    g = torch.Generator('cuda')
+    random.seed(2024)
+    np.random.seed(2024)
+    g.manual_seed(2024)
+    #torch.cuda.manual_seed(2024)
     train_nloader = DataLoader(Dataset(args, test_mode=False, is_normal=True),
-                               batch_size=args.batch_size, shuffle=False,
-                               num_workers=args.workers, pin_memory=False, drop_last=True)
+                               batch_size=args.batch_size, shuffle=True,
+                               num_workers=args.workers, pin_memory=False, drop_last=True,
+                               generator = g)
     train_aloader = DataLoader(Dataset(args, test_mode=False, is_normal=False),
-                               batch_size=args.batch_size, shuffle=False,
-                               num_workers=args.workers, pin_memory=False, drop_last=True)
+                               batch_size=args.batch_size, shuffle=True,
+                               num_workers=args.workers, pin_memory=False, drop_last=True,
+                               generator = g)
     test_loader = DataLoader(Dataset(args, test_mode=True),
                              batch_size=1, shuffle=False,
-                             num_workers=0, pin_memory=False)
+                             num_workers=0, pin_memory=False,
+                             generator = g)
 
 
     model = mgfn()

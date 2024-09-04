@@ -85,6 +85,13 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
 
             score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores = model(input)  # b*32  x 2048
             
+            #x_f, k, bs, ncrops = model.forward1(input)
+            #for i, (backbone, conv) in enumerate(model.get_stages()):
+            #    if i % 2 == 0:
+            #        x_f = model.forward2(x_f, backbone, conv)
+            #    else:
+            #        x_f, score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores = model.forward3(x_f, backbone, conv, k, bs, ncrops)
+            
             loss_sparse = sparsity(scores[:batch_size,:,:].view(-1), batch_size, 8e-3)
             
             loss_smooth = smooth(scores,8e-4)

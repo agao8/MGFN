@@ -7,9 +7,9 @@ def parse_args():
     parser.add_argument('--feature_size', type=int, default=2048, help='size of feature (default: UCF:2048//xd:1024)')
     parser.add_argument('--hiddensize', type=int, default=512, help='size of feature (default: 512)')
     parser.add_argument('--modality', default='RGB', help='the type of the input, RGB,AUDIO, or MIX')
-    parser.add_argument('--rgb-list', default='data/ucf_tencrop_1d/ucf-i3d.list', help='list of rgb features ')
-    parser.add_argument('--test-rgb-list', default='data/ucf_tencrop_1d/ucf-i3d-test.list', help='list of test rgb features ')
-    parser.add_argument('--gt', default='data/ucf_tencrop_1d/gt-ucf.npy', help='file of ground truth ')
+    parser.add_argument('--rgb-list', default='UCF-Crime/ucf-i3d-train.list', help='list of rgb features ')
+    parser.add_argument('--test-rgb-list', default='UCF-Crime/UCF-Crime/ucf-i3d-test.list', help='list of test rgb features ')
+    parser.add_argument('--gt', default='UCF-Crime/UCF-Crime/gt-ucf.npy', help='file of ground truth ')
 
     parser.add_argument('--mag_ratio', type=float, default=0.1, help='mag ratio')
 
@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument('--datasetname', default='UCF', help='dataset to train on (default:UCF/XD/UCF-bg-fg-sepa )')
     parser.add_argument('--preprocessed', action = 'store_true', help='if train set is already segmented')
     parser.add_argument('--plot-freq', type=int, default=10, help='frequency of plotting (default: 10)')
-    parser.add_argument('--max-epoch', type=int, default=1000, help='maximum iteration to train (default: 100)')
+    parser.add_argument('--max-epoch', type=int, default=20, help='maximum iteration to train (default: 10)')
 
 
 

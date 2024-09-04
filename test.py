@@ -14,21 +14,32 @@ def test(dataloader, model, args, device):
     plt.clf()
     with torch.no_grad():
         model.eval()
-        pred = torch.zeros(0)
+        #pred = torch.zeros(0)
+        pred = np.zeros(0)
         featurelen =[]
         for i, inputs in tqdm(enumerate(dataloader)):
-
             input = inputs[0].to(device)
             input = input.permute(0, 2, 1, 3)
-            _, _, _, _, logits = model(input)
-            logits = torch.squeeze(logits, 1)
-            logits = torch.mean(logits, 0)
-            sig = logits
-            featurelen.append(len(sig))
-            pred = torch.cat((pred, sig))
-
+            #sig = torch.zeros(0)
+            #featurelen_i = []
+            #for c  in input.chunk((input.shape[2] // 2000) + 1, 2):
+            for c in [input]:
+                _, _, _, _, logits = model(c)
+                logits = torch.squeeze(logits, 1)
+                logits = torch.mean(logits, 0)
+                sig = logits
+                featurelen.append(len(sig))
+                #pred = torch.cat((pred, sig))
+                #sig = sig_.cpu().detach().numpy().squeeze()
+            #print(i)
+            #print(np.mean(sig))
+            #print(np.repeat(np.array(np.mean(sig)), featurelen_i).shape)
+                #pred = np.concatenate((pred, np.repeat(np.array(np.mean(sig)), featurelen_i)))
+                pred = np.concatenate((pred, sig.cpu().detach().numpy().squeeze()))
+            #featurelen += featurelen_i
         gt = np.load(args.gt)
-        pred = list(pred.cpu().detach().numpy())
+        #pred = list(pred.cpu().detach().numpy())
+        pred = list(pred)
         pred = np.repeat(np.array(pred), 16)
         fpr, tpr, threshold = roc_curve(list(gt), pred)
         rec_auc = auc(fpr, tpr)
