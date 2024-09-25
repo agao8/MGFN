@@ -110,14 +110,25 @@ class LayerNorm(nn.Module):
         mean = torch.mean(x, dim = 1, keepdim = True)
         return (x - mean) / (std + self.eps) * self.g + self.b
 
+class Permute(nn.Module):
+    def __init__(self, dims):
+        super().__init__()
+        self.dims = dims
+
+    def forward(self, x):
+        return torch.permute(x, self.dims)
 
 def FeedForward(dim, repe = 4, dropout = 0.):
     return nn.Sequential(
         LayerNorm(dim),
-        nn.Conv1d(dim, dim * repe, 1),
+        nn.Conv1d(dim, dim * repe, 1, padding=0),
+        #Permute((0, 2, 1)),
+        #nn.Linear(dim, dim * repe),
         nn.GELU(),
         nn.Dropout(dropout),
-        nn.Conv1d(dim * repe, dim, 1)
+        nn.Conv1d(dim * repe, dim, 1, padding=0)
+        #nn.Linear(dim * repe, dim),
+        #Permute((0, 2, 1))
     )
 
 # MHRAs (multi-head relation aggregators)
@@ -127,7 +138,7 @@ class FOCUS(nn.Module):
         dim,
         heads,
         dim_head = 64,
-        local_aggr_kernel = 5
+        local_aggr_kernel = 3
     ):
         super().__init__()
         self.heads = heads
@@ -159,18 +170,33 @@ class GLANCE(nn.Module):
         self.heads = heads
         self.scale = dim_head ** -0.5
         inner_dim = dim_head * heads
+        self.inner_dim = inner_dim
         self.norm = LayerNorm(dim)
+        self.dim = dim
         self.to_qkv = nn.Conv1d(dim, inner_dim * 3, 1, bias = False)
         self.to_out = nn.Conv1d(inner_dim, dim, 1)
         self.attn =0
+        self.mha = nn.MultiheadAttention(self.dim, self.heads, dropout=dropout)
 
     def forward(self, x):
         x = self.norm(x)
         shape, h = x.shape, self.heads
         x = rearrange(x, 'b c ... -> b c (...)')
+        #print(x.shape)
         q, k, v = self.to_qkv(x).chunk(3, dim = 1)
         q, k, v = map(lambda t: rearrange(t, 'b (h d) n -> b h n d', h = h), (q, k, v))
+        #print(q.shape)
+        #print(k.shape)
+        #print(v.shape)
+
+        #out = self.mha(q, k, v, need_weights=False)[0]
+        #return out
+        #return rearrange(out, 'b (h n) d -> b (h d) n', h=h)
+
+
         q = q * self.scale
+        
+
         sim = einsum('b h i d, b h j d -> b h i j', q, k)
         self.attn = sim.softmax(dim = -1)
         out = einsum('b h i j, b h j d -> b h i d', self.attn, v)

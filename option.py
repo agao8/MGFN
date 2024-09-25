@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--comment', default='mgfn', help='comment for the ckpt name of the training')
 
 
-    parser.add_argument('--seg_length', type=int, default=32, help='default:32')
+    parser.add_argument('--seg_length', type=int, default=128, help='default:32')
     parser.add_argument('--local_con', default='static', help='dynamic/static')
     #for dynamic
     parser.add_argument('--head_K', type=int, default= 4, help='default = 4')
@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--mgfn_type3', default='fb', help='mgfn_types3')
 
     #dropout rate
-    parser.add_argument('--dropout_rate', type=float, default=0.7, help='dropout rate')
+    parser.add_argument('--dropout_rate', type=float, default=0.9, help='dropout rate')
 
 
     parser.add_argument('--gpus', type=str, default='0', help='gpus')

@@ -26,11 +26,11 @@ class Dataset(data.Dataset):
         if self.test_mode is False:
             if args.datasetname == 'UCF':
                 if self.is_normal:
-                    self.list = self.list[343:]#ucf 810; sht63; xd 9525
+                    self.list = self.list[810:]
                     print('normal list')
                     print(self.list)
                 else:
-                    self.list = self.list[:343]#ucf 810; sht 63; 9525
+                    self.list = self.list[:810]
                     print('abnormal list')
                     print(self.list)
             elif args.datasetname == 'XD':

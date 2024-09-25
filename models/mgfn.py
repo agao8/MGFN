@@ -102,7 +102,6 @@ class Backbone(nn.Module):
         super().__init__()
 
         self.layers = nn.ModuleList([])
-
         for _ in range(depth):
             if mgfn_type == 'fb':
                 attention = FOCUS(dim, heads = heads, dim_head = dim_headnumber, local_aggr_kernel = kernel)
@@ -113,15 +112,16 @@ class Backbone(nn.Module):
 
             self.layers.append(nn.ModuleList([
                 nn.Conv1d(dim, dim, 3, padding = 1),
+                #nn.Conv1d(dim, dim, 3, padding = 1),
                 attention,
                 FeedForward(dim, repe = ff_repe, dropout = dropout),
+                #FeedForward(dim, repe = ff_repe, dropout = dropout)
             ]))
 
     def forward(self, x):
-        for scc, attention, ff in self.layers:
-            x = scc(x) + x
-            x = attention(x) + x
-            x = ff(x) + x
+        for layers in self.layers:
+            for layer in layers:
+                x = layer(x)
 
         return x
 
@@ -132,9 +132,11 @@ class mgfn(nn.Module):
         self,
         *,
         classes=0,
-        dims = (64, 128, 1024),
-        depths = (args.depths1, args.depths2, args.depths3),
-        mgfn_types = (args.mgfn_type1,args.mgfn_type2, args.mgfn_type3),
+        dims = (128, 1024),
+        #depths = (args.depths1, args.depths2, args.depths3),
+        #mgfn_types = (args.mgfn_type1,args.mgfn_type2, args.mgfn_type3),
+        depths = (args.depths1, args.depths2),
+        mgfn_types = (args.mgfn_type1, args.mgfn_type2),
         lokernel = 5,
         channels = 2048,
         ff_repe = 4,
@@ -180,6 +182,22 @@ class mgfn(nn.Module):
         self.drop_out = nn.Dropout(args.dropout_rate)
 
         self.to_mag = nn.Conv1d(1, init_dim, kernel_size=3, stride=1, padding=1)
+        
+        #self._initialize_weights()
+        #self.stages.apply(self.init_weights)
+
+    def init_weights(self, m):
+        print(type(m))
+        if isinstance(m, nn.Conv1d):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                m.bias.data.zero_()
+        #elif isinstance(m, nn.BatchNorm1d):
+        #    nn.init.xavier_uniform_(m.weight)
+        #    if m.bias is not None:
+        #        m.bias.data.zero_()
+        else:
+            print("Unable to initalize weights for layer: " + str(type(m)))
     def forward(self, video):
         
         k = 3
