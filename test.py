@@ -18,8 +18,10 @@ def test(dataloader, model, args, device):
         pred = []
         featurelen =[]
         labels = []
+        class_results = [[]] * 14
         for i, inputs in tqdm(enumerate(dataloader)):
             labels.append(inputs[1].cpu().detach())
+            atype = inputs[2].cpu().detach()
             input = inputs[0].to(device)
             input = input.permute(0, 2, 1, 3)
             #sig = torch.zeros(0)
@@ -46,12 +48,17 @@ def test(dataloader, model, args, device):
                 #pred = np.concatenate((pred, sig.cpu().detach().numpy().squeeze()))
                 #pred.append(sig.cpu().detach().numpy().squeeze().mean())
                 pred.append(sa.cpu().detach().squeeze())
+                class_results[atype].append(sa.cpu().detach().numpy().squeeze())
             #featurelen += featurelen_i
         #gt = np.load(args.gt)
         #pred = list(pred.cpu().detach().numpy())
         #pred = list(pred)
         #pred = np.repeat(np.array(pred), 16)
-        #print(pred)
+
+        for i, at in enumerate(classes):
+            if i == 0:
+                pass
+            print(at + ": " + str(np.sum(np.array(class_results[i]) > 0.5)) + "/" + str(len(class_results[i])))
         fpr, tpr, threshold = roc_curve(labels, pred)
         rec_auc = auc(fpr, tpr)
         precision, recall, th = precision_recall_curve(labels, pred)

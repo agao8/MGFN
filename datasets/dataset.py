@@ -6,6 +6,8 @@ torch.set_default_tensor_type('torch.cuda.FloatTensor')
 import option
 args=option.parse_args()
 
+classes = ["Normal", "Abuse", "Arrest", "Arson", "Assault", "Burglary", "Explosion", "Fighting", "RoadAccidents", "Robbery", "Shooting", "Shoplifting", "Stealing", "Vandalism"]
+
 class Dataset(data.Dataset):
     def __init__(self, args, is_normal=True, transform=None, test_mode=False, is_preprocessed=False):
         self.modality = args.modality
@@ -69,7 +71,7 @@ class Dataset(data.Dataset):
                 divided_features = np.array(divided_features, dtype=np.float32)
                 divided_mag = np.array(divided_mag, dtype=np.float32)
                 divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
-                return divided_features, label
+                return divided_features, label, self.get_type(index)
             return
 
     def get_label(self, index):
@@ -80,6 +82,12 @@ class Dataset(data.Dataset):
             label = torch.tensor(1.0)
             # label[1] = 1
         return label
+
+    def get_type(self, index):
+        for i, atype in enumerate(classes):
+            if atype in self.list[index]:
+                return i
+        return -1
 
     def __len__(self):
 
