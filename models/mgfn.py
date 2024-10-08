@@ -121,7 +121,7 @@ class Backbone(nn.Module):
     def forward(self, x):
         for layers in self.layers:
             for layer in layers:
-                x = layer(x)
+                x = x + layer(x)
 
         return x
 
@@ -132,11 +132,13 @@ class mgfn(nn.Module):
         self,
         *,
         classes=0,
-        dims = (128, 1024),
+        dims = (64, 128),
         #depths = (args.depths1, args.depths2, args.depths3),
         #mgfn_types = (args.mgfn_type1,args.mgfn_type2, args.mgfn_type3),
-        depths = (args.depths1, args.depths2),
-        mgfn_types = (args.mgfn_type1, args.mgfn_type2),
+        #depths = (args.depths1, args.depths2),
+        #mgfn_types = (args.mgfn_type1, args.mgfn_type2),
+        depths = (3, 3),
+        mgfn_types = ("gb", "fb"),
         lokernel = 5,
         channels = 2048,
         ff_repe = 4,
@@ -217,7 +219,6 @@ class mgfn(nn.Module):
         x =  self.to_logits(x_f)
         scores = self.sigmoid(self.fc(x))  # (B*10crop,32,1)
         score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
-
         return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
 
     def forward1(self, video):

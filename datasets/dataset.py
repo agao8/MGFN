@@ -33,17 +33,6 @@ class Dataset(data.Dataset):
                     self.list = self.list[:810]
                     print('abnormal list')
                     print(self.list)
-            elif args.datasetname == 'XD':
-                if self.is_normal:
-                    self.list = self.list[9525:]
-                    print('normal list')
-                    print(self.list)
-                else:
-                    self.list = self.list[:9525]
-                    print('abnormal list')
-                    print(self.list)
-
-
 
     def __getitem__(self, index):
         label = self.get_label(index)  # get video level label 0/1
@@ -51,21 +40,20 @@ class Dataset(data.Dataset):
             features = np.load(self.list[index].strip('\n'), allow_pickle=True)
             features = np.array(features, dtype=np.float32)
             name = self.list[index].split('/')[-1].strip('\n')[:-4]
-        elif args.datasetname == 'XD':
-            features = np.load(self.list[index].strip('\n'), allow_pickle=True)
-            features = np.array(features, dtype=np.float32)
-            name = self.list[index].split('/')[-1].strip('\n')[:-4]
         if self.tranform is not None:
             features = self.tranform(features)
 
         if self.test_mode:
+            if "Normal" not in name:
+                label = 1
+        if False:
             if args.datasetname == 'UCF':
                 mag = np.linalg.norm(features, axis=2)[:,:, np.newaxis]
                 features = np.concatenate((features,mag),axis = 2)
             elif args.datasetname == 'XD':
                 mag = np.linalg.norm(features, axis=1)[:, np.newaxis]
                 features = np.concatenate((features, mag), axis=1)
-            return features, name
+            return features, name, label
         else:
             if args.datasetname == 'UCF':
                 if self.is_preprocessed:
@@ -82,14 +70,7 @@ class Dataset(data.Dataset):
                 divided_mag = np.array(divided_mag, dtype=np.float32)
                 divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
                 return divided_features, label
-
-            elif args.datasetname == 'XD':
-                feature = process_feat(features, 32)
-                if args.add_mag_info == True:
-                    feature_mag = np.linalg.norm(feature, axis=1)[:, np.newaxis]
-                    feature = np.concatenate((feature,feature_mag),axis = 1)
-                return feature, label
-
+            return
 
     def get_label(self, index):
         if self.is_normal:

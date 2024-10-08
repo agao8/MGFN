@@ -48,8 +48,7 @@ if __name__ == '__main__':
                                batch_size=args.batch_size, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
-    aData = Dataset(args, test_mode=False, is_normal=False)
-    train_aloader = DataLoader(torch.utils.data.ConcatDataset([aData, aData, aData, aData]),
+    train_aloader = DataLoader(Dataset(args, test_mode=False, is_normal=False),
                                batch_size=args.batch_size, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
@@ -57,10 +56,6 @@ if __name__ == '__main__':
                              batch_size=1, shuffle=False,
                              num_workers=0, pin_memory=False,
                              generator = g)
-
-
-    print(len(train_nloader))
-    print(len(train_aloader))
 
     model = mgfn(dropout = args.dropout_rate, attention_dropout = args.dropout_rate)
     if args.pretrained_ckpt is not None:
