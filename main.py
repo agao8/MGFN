@@ -45,11 +45,11 @@ if __name__ == '__main__':
     g.manual_seed(2024)
     #torch.cuda.manual_seed(2024)
     train_nloader = DataLoader(Dataset(args, test_mode=False, is_normal=True),
-                               batch_size=args.batch_size, shuffle=False,
+                               batch_size=args.batch_size // 2, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
     train_aloader = DataLoader(Dataset(args, test_mode=False, is_normal=False),
-                               batch_size=args.batch_size, shuffle=False,
+                               batch_size=args.batch_size // 2, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
     test_loader = DataLoader(Dataset(args, test_mode=True),
@@ -57,7 +57,7 @@ if __name__ == '__main__':
                              num_workers=0, pin_memory=False,
                              generator = g)
 
-    model = mgfn(dropout = args.dropout_rate, attention_dropout = args.dropout_rate)
+    model = mgfn(dropout = args.dropout_rate, classes = 2, attention_dropout = args.dropout_rate)
     if args.pretrained_ckpt is not None:
         model_ckpt = torch.load(args.pretrained_ckpt)
         model.load_state_dict(model_ckpt)
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             for param_group in optimizer.param_groups:
                 param_group["lr"] = config.lr[step - 1]
 
-        cost, loss_smooth, loss_sparse = train(train_nloader, train_aloader, model, args.batch_size, optimizer,
+        cost = train(train_nloader, train_aloader, model, args.batch_size, optimizer,
                                                    device, iterator)
         log_writer.add_scalar('loss_contrastive', cost, step)
 

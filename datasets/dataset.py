@@ -28,11 +28,11 @@ class Dataset(data.Dataset):
         if self.test_mode is False:
             if args.datasetname == 'UCF':
                 if self.is_normal:
-                    self.list = self.list[810:]
+                    self.list = self.list[:800] # self.list[810:]
                     print('normal list')
                     print(self.list)
                 else:
-                    self.list = self.list[:810]
+                    self.list = self.list[800:]
                     print('abnormal list')
                     print(self.list)
 
@@ -76,10 +76,11 @@ class Dataset(data.Dataset):
 
     def get_label(self, index):
         if self.is_normal:
+        #if "Normal" in self.list[index]:
             # label[0] = 1
-            label = torch.tensor(0.0)
+            label = torch.tensor(0)
         else:
-            label = torch.tensor(1.0)
+            label = torch.tensor(1)
             # label[1] = 1
         return label
 

@@ -10,6 +10,8 @@ from models.mgfn import mgfn as Model
 from datasets.dataset import Dataset
 import train
 
+classes = ["Normal", "Abuse", "Arrest", "Arson", "Assault", "Burglary", "Explosion", "Fighting", "RoadAccidents", "Robbery", "Shooting", "Shoplifting", "Stealing", "Vandalism"]
+
 def test(dataloader, model, args, device):
     plt.clf()
     with torch.no_grad():
@@ -18,27 +20,27 @@ def test(dataloader, model, args, device):
         pred = []
         featurelen =[]
         labels = []
-        class_results = [[]] * 14
+        class_results = {}
         for i, inputs in tqdm(enumerate(dataloader)):
             labels.append(inputs[1].cpu().detach())
             atype = inputs[2].cpu().detach()
             input = inputs[0].to(device)
-            input = input.permute(0, 2, 1, 3)
+            #input = input.permute(0, 2, 1, 3)
             #sig = torch.zeros(0)
             #featurelen_i = []
             #for c  in input.chunk((input.shape[2] // 2000) + 1, 2):
-            for c in [input]:
-                sa, sn, _, _, logits = model(c)
+            #for c in [input]:
+            _, output = model(input)
                 #print(sa)
                 #print(sn)
                 #print()
-                logits = torch.squeeze(logits, 1)
-                logits = torch.mean(logits, 0)
+            #logits = torch.squeeze(logits, 1)
+            #logits = torch.mean(logits, 0)
                 #print(logits.squeeze().mean())
                 #print(labels[i])
                 #print()
-                sig = logits
-                featurelen.append(len(sig))
+            #sig = logits
+            #featurelen.append(len(sig))
                 #pred = torch.cat((pred, sig))
                 #sig = sig_.cpu().detach().numpy().squeeze()
             #print(i)
@@ -47,18 +49,23 @@ def test(dataloader, model, args, device):
                 #pred = np.concatenate((pred, np.repeat(np.array(np.mean(sig)), featurelen_i)))
                 #pred = np.concatenate((pred, sig.cpu().detach().numpy().squeeze()))
                 #pred.append(sig.cpu().detach().numpy().squeeze().mean())
-                pred.append(sa.cpu().detach().squeeze())
-                class_results[atype].append(sa.cpu().detach().numpy().squeeze())
+            pred_ = torch.argmax(output.cpu().detach())
+            #print(pred_)
+            pred.append(pred_)
+            class_results[atype.item()] = np.append(class_results.get(atype.item(), np.array([])), (pred_))
             #featurelen += featurelen_i
         #gt = np.load(args.gt)
         #pred = list(pred.cpu().detach().numpy())
         #pred = list(pred)
         #pred = np.repeat(np.array(pred), 16)
-
+        print()
         for i, at in enumerate(classes):
+            if class_results.get(i, None) is None:
+                continue
             if i == 0:
-                pass
-            print(at + ": " + str(np.sum(np.array(class_results[i]) > 0.5)) + "/" + str(len(class_results[i])))
+                print(at + ": " + str(np.sum(class_results[i] <= 0.5)) + "/" + str(len(class_results[i])))
+            else:
+                print(at + ": " + str(np.sum(class_results[i] > 0.5)) + "/" + str(len(class_results[i])))
         fpr, tpr, threshold = roc_curve(labels, pred)
         rec_auc = auc(fpr, tpr)
         precision, recall, th = precision_recall_curve(labels, pred)

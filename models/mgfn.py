@@ -132,13 +132,13 @@ class mgfn(nn.Module):
         self,
         *,
         classes=0,
-        dims = (64, 128),
+        dims = (64, 256, 512),
         #depths = (args.depths1, args.depths2, args.depths3),
         #mgfn_types = (args.mgfn_type1,args.mgfn_type2, args.mgfn_type3),
         #depths = (args.depths1, args.depths2),
         #mgfn_types = (args.mgfn_type1, args.mgfn_type2),
-        depths = (3, 3),
-        mgfn_types = ("gb", "fb"),
+        depths = (4, 3, 3),
+        mgfn_types = ("gb", "fb", "fb"),
         lokernel = 5,
         channels = 2048,
         ff_repe = 4,
@@ -180,6 +180,9 @@ class mgfn(nn.Module):
         )
         self.batch_size =  args.batch_size
         self.fc = nn.Linear(last_dim, 1)
+        self.fc2 = nn.Linear(args.seg_length, classes)
+        self.classifier = nn.Softmax(dim=1)
+        self.pool = nn.MaxPool1d(10) # 10crop
         self.sigmoid = nn.Sigmoid()
         self.drop_out = nn.Dropout(args.dropout_rate)
 
@@ -217,9 +220,15 @@ class mgfn(nn.Module):
 
         x_f = x_f.permute(0, 2, 1)
         x =  self.to_logits(x_f)
-        scores = self.sigmoid(self.fc(x))  # (B*10crop,32,1)
-        score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
-        return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
+        feats = self.fc(x).squeeze(dim=2)  # (B*10crop,32,1)
+        feats = feats.permute(1, 0)
+        feats = self.pool(feats)
+        feats = feats.permute(1, 0)
+        output = self.fc2(feats)
+        #output = self.classifier(output)
+        return feats, output
+        #score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
+        #return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
 
     def forward1(self, video):
         k = 3

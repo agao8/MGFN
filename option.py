@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--comment', default='mgfn', help='comment for the ckpt name of the training')
 
 
-    parser.add_argument('--seg_length', type=int, default=32, help='default:32')
+    parser.add_argument('--seg_length', type=int, default=64, help='default:32')
     parser.add_argument('--local_con', default='static', help='dynamic/static')
     #for dynamic
     parser.add_argument('--head_K', type=int, default= 4, help='default = 4')
@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--mgfn_type3', default='fb', help='mgfn_types3')
 
     #dropout rate
-    parser.add_argument('--dropout_rate', type=float, default=0.8, help='dropout rate')
+    parser.add_argument('--dropout_rate', type=float, default=0.9, help='dropout rate')
 
 
     parser.add_argument('--gpus', type=str, default='0', help='gpus')
@@ -47,7 +47,7 @@ def parse_args():
     parser.add_argument('--datasetname', default='UCF', help='dataset to train on (default:UCF/XD/UCF-bg-fg-sepa )')
     parser.add_argument('--preprocessed', action = 'store_true', help='if train set is already segmented')
     parser.add_argument('--plot-freq', type=int, default=10, help='frequency of plotting (default: 10)')
-    parser.add_argument('--max-epoch', type=int, default=10, help='maximum iteration to train (default: 10)')
+    parser.add_argument('--max-epoch', type=int, default=20, help='maximum iteration to train (default: 10)')
 
 
 

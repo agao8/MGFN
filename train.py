@@ -50,12 +50,23 @@ class mgfn_loss(torch.nn.Module):
         super(mgfn_loss, self).__init__()
         self.alpha = alpha
         self.sigmoid = torch.nn.Sigmoid()
-        self.criterion = torch.nn.BCELoss()
+        self.criterion = torch.nn.CrossEntropyLoss()
         self.contrastive = ContrastiveLoss()
 
+    def forward(self, feats, output, nlabel, alabel):
+        label = torch.cat((nlabel, alabel), 0)
+        label = label.cuda()
+        loss_cls = self.criterion(output, label)
+        bs = args.batch_size
+        n_feats = feats[:bs // 2]
+        a_feats = feats[bs // 2:]
+        loss_con = self.contrastive(n_feats, a_feats, 1)
+        loss_con_n = self.contrastive(n_feats[:bs // 4], n_feats[bs // 4:], 0)
+        loss_con_a = self.contrastive(a_feats[:bs // 4], a_feats[bs // 4:], 0)
+        return loss_cls + 0.003 * (loss_con + loss_con_a + loss_con_n)
 
 
-    def forward(self, score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude):
+    def forward_(self, score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude):
         label = torch.cat((nlabel, alabel), 0)
         score_abnormal = score_abnormal
         score_normal = score_normal
@@ -72,7 +83,7 @@ class mgfn_loss(torch.nn.Module):
                                       0)  # try to cluster the same class
         loss_con_a = self.contrastive(torch.norm(abn_feamagnitude[int(seperate):], p=1, dim=2),
                                       torch.norm(abn_feamagnitude[:int(seperate)], p=1, dim=2), 0)
-        loss_total = loss_cls + 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n )
+        loss_total = loss_cls + 0.003 * (0.003 * loss_con + loss_con_a + loss_con_n )
         
         return loss_total
 
@@ -81,13 +92,11 @@ class mgfn_loss(torch.nn.Module):
 def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
     with torch.set_grad_enabled(True):
         model.train()
-        for step, ((ninput, nlabel), (ainput, alabel)) in tqdm(enumerate(
+        for step, ((ninput, nlabel, _), (ainput, alabel, _)) in tqdm(enumerate(
                 zip(nloader, aloader))):
-
             input = torch.cat((ninput, ainput), 0).to(device)
-
-            score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores = model(input)  # b*32  x 2048
             
+            #score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores = model(input)  # b*32  x 2048
             #x_f, k, bs, ncrops = model.forward1(input)
             #for i, (backbone, conv) in enumerate(model.get_stages()):
             #    if i % 2 == 0:
@@ -95,19 +104,28 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
             #    else:
             #        x_f, score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores = model.forward3(x_f, backbone, conv, k, bs, ncrops)
             
-            loss_sparse = sparsity(scores[:batch_size,:,:].view(-1), batch_size, 8e-3)
+            feats, output = model(input)
+            #print(feats.shape)
+            #print(output.shape)
+            #print(feats)
+            #print(output)
+            #loss_sparse = sparsity(feats, batch_size, 8e-3)
             
-            loss_smooth = smooth(scores,8e-4)
+            #loss_smooth = smooth(feats,8e-4)
 
-            scores = scores.view(batch_size * 32 * 2, -1)
-            scores = scores.squeeze()
+            #scores = scores.view(batch_size * 32 * 2, -1)
+            #scores = scores.squeeze()
 
-            nlabel = nlabel[0:batch_size]
-            alabel = alabel[0:batch_size]
+            #print(nlabel)
+            #print(alabel)
+
+            #nlabel = nlabel[0:batch_size]
+            #alabel = alabel[0:batch_size]
 
             loss_criterion = mgfn_loss(0.0001)
+            cost = loss_criterion(feats, output, nlabel, alabel)
 
-            cost = loss_criterion(score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude) + loss_smooth + loss_sparse
+            #cost = loss_criterion(score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude) + loss_smooth + loss_sparse
 
             optimizer.zero_grad()
             cost.backward()
@@ -115,4 +133,4 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
             optimizer.step()
             iterator += 1
 
-        return  cost.item(),loss_smooth.item(),loss_sparse.item()
+        return  cost.item()
