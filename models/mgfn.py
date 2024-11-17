@@ -132,13 +132,13 @@ class mgfn(nn.Module):
         self,
         *,
         classes=0,
-        dims = (64, 256, 512),
+        dims = (64, 128),
         #depths = (args.depths1, args.depths2, args.depths3),
         #mgfn_types = (args.mgfn_type1,args.mgfn_type2, args.mgfn_type3),
         #depths = (args.depths1, args.depths2),
         #mgfn_types = (args.mgfn_type1, args.mgfn_type2),
-        depths = (4, 3, 3),
-        mgfn_types = ("gb", "fb", "fb"),
+        depths = (3, 3),
+        mgfn_types = ("gb", "fb"),
         lokernel = 5,
         channels = 2048,
         ff_repe = 4,
@@ -180,10 +180,11 @@ class mgfn(nn.Module):
         )
         self.batch_size =  args.batch_size
         self.fc = nn.Linear(last_dim, 1)
-        self.fc2 = nn.Linear(args.seg_length, classes)
-        self.classifier = nn.Softmax(dim=1)
-        self.pool = nn.MaxPool1d(10) # 10crop
+        self.fc2 = nn.Linear(10, 1)
+        self.classifier = nn.Linear(args.seg_length, classes)
+        #self.pool = nn.MaxPool1d(10) # 10crop
         self.sigmoid = nn.Sigmoid()
+        self.relu = nn.ReLU()
         self.drop_out = nn.Dropout(args.dropout_rate)
 
         self.to_mag = nn.Conv1d(1, init_dim, kernel_size=3, stride=1, padding=1)
@@ -220,15 +221,54 @@ class mgfn(nn.Module):
 
         x_f = x_f.permute(0, 2, 1)
         x =  self.to_logits(x_f)
-        feats = self.fc(x).squeeze(dim=2)  # (B*10crop,32,1)
-        feats = feats.permute(1, 0)
-        feats = self.pool(feats)
-        feats = feats.permute(1, 0)
-        output = self.fc2(feats)
+        scores = self.fc(x).squeeze()
+        scores = self.sigmoid(scores).squeeze()
+        scores = scores.view(args.seg_length, bs, ncrops)
+        scores = self.fc2(scores).squeeze(dim=2)
+        scores = self.sigmoid(scores)
+        scores = scores.permute(1, 0)
+        feats = scores
+        scores = self.classifier(scores)
+        #score_normal = out[:args.batch_size]
+        #score_abnormal = out[args.batch_size:]
+        
+        #feats = x
+        #feats = torch.norm(x, p=2, dim=2)
+        #feats = feats.view(bs, ncrops, -1).mean(1)
+        #nfeats = feats[:args.batch_size]
+        #afeats = feats[args.batch_size:]
+        #feats = self.fc(x).squeeze(dim=2)  # (B*10crop,32,1)
+        #feats = feats.permute(1, 0)
+        #feats = self.pool(feats)
+        #feats = feats.permute(1, 0)
+        #output = self.fc2(feats)
         #output = self.classifier(output)
-        return feats, output
+        #return feats, output
+        #print(x.shape)
+        #print(x)
+        #print(scores.shape)
+        #print(scores)
         #score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
-        #return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
+        #print(score_abnormal.shape)
+        #print(score_abnormal)
+        #print(score_normal.shape)
+        #print(score_normal)
+        #print(abn_feamagnitude.shape)
+        #print(abn_feamagnitude)
+        #print(nor_feamagnitude.shape)
+        #print(nor_feamagnitude)
+        #print(scores.shape)
+        #print(score_normal)
+        #print(score_abnormal)
+        #print(scores.shape)
+        #print(nfeats.shape)
+        #print(afeats.shape)
+        #print(scores.shape)
+        #print(scores)
+        #print(feats.shape)
+        #print(feats)
+        return scores, feats
+        #return score_abnormal, score_normal, afeats, nfeats, scores
 
     def forward1(self, video):
         k = 3

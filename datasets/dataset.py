@@ -29,12 +29,12 @@ class Dataset(data.Dataset):
             if args.datasetname == 'UCF':
                 if self.is_normal:
                     self.list = self.list[:800] # self.list[810:]
-                    print('normal list')
-                    print(self.list)
+                    #print('normal list')
+                    #print(self.list)
                 else:
                     self.list = self.list[800:]
-                    print('abnormal list')
-                    print(self.list)
+                    #print('abnormal list')
+                    #print(self.list)
 
     def __getitem__(self, index):
         label = self.get_label(index)  # get video level label 0/1

@@ -53,16 +53,15 @@ class mgfn_loss(torch.nn.Module):
         self.criterion = torch.nn.CrossEntropyLoss()
         self.contrastive = ContrastiveLoss()
 
-    def forward(self, feats, output, nlabel, alabel):
-        label = torch.cat((nlabel, alabel), 0)
-        label = label.cuda()
-        loss_cls = self.criterion(output, label)
+    def forward(self, scores, feats, targets):
+        loss_cls = self.criterion(scores, targets)
         bs = args.batch_size
-        n_feats = feats[:bs // 2]
-        a_feats = feats[bs // 2:]
+        n_feats = feats[:bs]
+        a_feats = feats[bs:]
         loss_con = self.contrastive(n_feats, a_feats, 1)
-        loss_con_n = self.contrastive(n_feats[:bs // 4], n_feats[bs // 4:], 0)
-        loss_con_a = self.contrastive(a_feats[:bs // 4], a_feats[bs // 4:], 0)
+        loss_con_n = self.contrastive(n_feats[:bs // 2], n_feats[bs // 2:], 0)
+        loss_con_a = self.contrastive(a_feats[:bs // 2], a_feats[bs // 2:], 0)
+        return loss_cls
         return loss_cls + 0.003 * (loss_con + loss_con_a + loss_con_n)
 
 
@@ -104,26 +103,29 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
             #    else:
             #        x_f, score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores = model.forward3(x_f, backbone, conv, k, bs, ncrops)
             
-            feats, output = model(input)
+            #feats, output = model(input)
             #print(feats.shape)
             #print(output.shape)
             #print(feats)
             #print(output)
-            #loss_sparse = sparsity(feats, batch_size, 8e-3)
             
-            #loss_smooth = smooth(feats,8e-4)
+            scores, feats = model(input)
+
+            #loss_sparse = sparsity(scores[:batch_size,:,:].view(-1), batch_size, 8e-3)
+            
+            #loss_smooth = smooth(scores,8e-4)
 
             #scores = scores.view(batch_size * 32 * 2, -1)
             #scores = scores.squeeze()
 
             #print(nlabel)
             #print(alabel)
-
+            labels = torch.cat((nlabel, alabel), 0).to(device)
             #nlabel = nlabel[0:batch_size]
             #alabel = alabel[0:batch_size]
 
             loss_criterion = mgfn_loss(0.0001)
-            cost = loss_criterion(feats, output, nlabel, alabel)
+            cost = loss_criterion(scores, feats, labels)
 
             #cost = loss_criterion(score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude) + loss_smooth + loss_sparse
 

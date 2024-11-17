@@ -45,11 +45,11 @@ if __name__ == '__main__':
     g.manual_seed(2024)
     #torch.cuda.manual_seed(2024)
     train_nloader = DataLoader(Dataset(args, test_mode=False, is_normal=True),
-                               batch_size=args.batch_size // 2, shuffle=False,
+                               batch_size=args.batch_size, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
     train_aloader = DataLoader(Dataset(args, test_mode=False, is_normal=False),
-                               batch_size=args.batch_size // 2, shuffle=False,
+                               batch_size=args.batch_size, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
     test_loader = DataLoader(Dataset(args, test_mode=True),
