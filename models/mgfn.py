@@ -15,7 +15,7 @@ def attention(q, k, v):
     out = einsum('b i j, b j d -> b i d', attn, v)
     return out
 
-def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
+def MSNSD_(features,scores,bs,batch_size,drop_out,ncrops,k):
     #magnitude selection and score prediction
     features = features  # (B*10crop,32,1024)
     bc, t, f = features.size()
@@ -45,7 +45,7 @@ def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
 
 
     afea_magnitudes_drop = afea_magnitudes * select_idx
-    idx_abn = torch.topk(afea_magnitudes_drop, k, dim=1)[1]
+    idx_abn = torch.topk(afea_magnitudes, k, dim=1)[1]
     idx_abn_feat = idx_abn.unsqueeze(2).expand([-1, -1, abnormal_features.shape[2]])
 
     abnormal_features = abnormal_features.view(n_size, ncrops, t, f)
@@ -56,7 +56,6 @@ def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
         feat_select_abn = torch.gather(abnormal_feature, 1,
                                        idx_abn_feat)
         total_select_abn_feature = torch.cat((total_select_abn_feature, feat_select_abn))  #
-
     idx_abn_score = idx_abn.unsqueeze(2).expand([-1, -1, abnormal_scores.shape[2]])  #
     score_abnormal = torch.mean(torch.gather(abnormal_scores, 1, idx_abn_score),
                                 dim=1)
@@ -65,7 +64,7 @@ def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
     select_idx_normal = torch.ones_like(nfea_magnitudes).cuda()
     select_idx_normal = drop_out(select_idx_normal)
     nfea_magnitudes_drop = nfea_magnitudes * select_idx_normal
-    idx_normal = torch.topk(nfea_magnitudes_drop, k, dim=1)[1]
+    idx_normal = torch.topk(nfea_magnitudes, k, dim=1)[1]
     idx_normal_feat = idx_normal.unsqueeze(2).expand([-1, -1, normal_features.shape[2]])
 
     normal_features = normal_features.view(n_size, ncrops, t, f)
@@ -84,6 +83,40 @@ def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
     nor_feamagnitude = total_select_nor_feature
 
     return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
+
+def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
+   
+    print(features.shape)
+    print(scores.shape)
+
+    features = features
+    bc, t, f = features.size()
+
+    scores = scores.view(bs, ncrops, -1).mean(1)
+    scores = scores.unsqueeze(dim=2)
+
+    feat_magnitudes = torch.norm(features, p=2, dim=2)  # [b*ten,32]
+    feat_magnitudes = feat_magnitudes.view(bs, ncrops, -1).mean(1)  # [b,32]
+
+    select_idx = torch.ones_like(feat_magnitudes).cuda()
+    select_idx = drop_out(select_idx) 
+
+    feat_magnitudes_drop = feat_magnitudes * select_idx
+    idx = torch.topk(feat_magnitudes, k, dim=1)[1]
+    idx_feat = idx.unsqueeze(2).expand([-1, -1, features.shape[2]])
+    
+    features = features.view(bs, ncrops, t, f)
+    features = features.permute(1, 0, 2, 3)
+
+    total_select_feature = torch.zeros(0)
+    for feature in features:
+        feat_select = torch.gather(feature, 1, idx_feat)
+        total_select_feature = torch.cat((total_select_feature, feat_select))
+
+    idx_score = idx.unsqueeze(2).expand([-1, -1, scores.shape[2]])
+    score = torch.mean(torch.gather(scores, 1, idx_score), dim=1)
+    
+    return score[batch_size:], score[:batch_size], total_select_feature[:batch_size * ncrops], total_select_feature[batch_size * ncrops:], scores
 
 class Backbone(nn.Module):
     def __init__(
@@ -180,11 +213,11 @@ class mgfn(nn.Module):
         )
         self.batch_size =  args.batch_size
         self.fc = nn.Linear(last_dim, 1)
-        self.fc2 = nn.Linear(10, 1)
-        self.classifier = nn.Linear(args.seg_length, classes)
+        #self.fc2 = nn.Linear(10, 1)
+        #self.classifier = nn.Linear(args.seg_length, classes)
         #self.pool = nn.MaxPool1d(10) # 10crop
         self.sigmoid = nn.Sigmoid()
-        self.relu = nn.ReLU()
+        #self.relu = nn.ReLU()
         self.drop_out = nn.Dropout(args.dropout_rate)
 
         self.to_mag = nn.Conv1d(1, init_dim, kernel_size=3, stride=1, padding=1)
@@ -221,14 +254,14 @@ class mgfn(nn.Module):
 
         x_f = x_f.permute(0, 2, 1)
         x =  self.to_logits(x_f)
-        scores = self.fc(x).squeeze()
-        scores = self.sigmoid(scores).squeeze()
-        scores = scores.view(args.seg_length, bs, ncrops)
-        scores = self.fc2(scores).squeeze(dim=2)
-        scores = self.sigmoid(scores)
-        scores = scores.permute(1, 0)
-        feats = scores
-        scores = self.classifier(scores)
+        #scores = self.fc(x).squeeze()
+        scores = self.sigmoid(self.fc(x))
+        #scores = scores.view(args.seg_length, bs, ncrops)
+        #scores = self.fc2(scores).squeeze(dim=2)
+        #scores = self.sigmoid(scores)
+        #scores = scores.permute(1, 0)
+        #feats = scores
+        #scores = self.classifier(scores)
         #score_normal = out[:args.batch_size]
         #score_abnormal = out[args.batch_size:]
         
@@ -248,7 +281,10 @@ class mgfn(nn.Module):
         #print(x)
         #print(scores.shape)
         #print(scores)
-        #score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
+        score_normal, score_abnormal, nor_feamagnitude, abn_feamagnitude, _  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
+        _, sn, _, _, scores = MSNSD_(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
+        print(score_normal)
+        print(sn)
         #print(score_abnormal.shape)
         #print(score_abnormal)
         #print(score_normal.shape)
@@ -267,7 +303,7 @@ class mgfn(nn.Module):
         #print(scores)
         #print(feats.shape)
         #print(feats)
-        return scores, feats
+        return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
         #return score_abnormal, score_normal, afeats, nfeats, scores
 
     def forward1(self, video):
