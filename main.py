@@ -53,7 +53,7 @@ if __name__ == '__main__':
                                num_workers=args.workers, pin_memory=False, drop_last=True,
                                generator = g)
     test_loader = DataLoader(Dataset(args, test_mode=True),
-                             batch_size=1, shuffle=False,
+                             batch_size=2 * args.batch_size, shuffle=False,
                              num_workers=0, pin_memory=False,
                              generator = g)
 

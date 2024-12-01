@@ -84,11 +84,8 @@ def MSNSD_(features,scores,bs,batch_size,drop_out,ncrops,k):
 
     return score_abnormal, score_normal, abn_feamagnitude, nor_feamagnitude, scores
 
-def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
+def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k,training):
    
-    print(features.shape)
-    print(scores.shape)
-
     features = features
     bc, t, f = features.size()
 
@@ -99,24 +96,65 @@ def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k):
     feat_magnitudes = feat_magnitudes.view(bs, ncrops, -1).mean(1)  # [b,32]
 
     select_idx = torch.ones_like(feat_magnitudes).cuda()
-    select_idx = drop_out(select_idx) 
+    if training:
+        select_idx = drop_out(select_idx) 
 
     feat_magnitudes_drop = feat_magnitudes * select_idx
     idx = torch.topk(feat_magnitudes, k, dim=1)[1]
     idx_feat = idx.unsqueeze(2).expand([-1, -1, features.shape[2]])
     
     features = features.view(bs, ncrops, t, f)
-    features = features.permute(1, 0, 2, 3)
-
-    total_select_feature = torch.zeros(0)
-    for feature in features:
-        feat_select = torch.gather(feature, 1, idx_feat)
-        total_select_feature = torch.cat((total_select_feature, feat_select))
+    
+    feats = []
+    for i in range(bs):
+        feats += [torch.gather(features[i], 1, idx_feat[i].unsqueeze(0).expand([ncrops, -1, -1]))]
 
     idx_score = idx.unsqueeze(2).expand([-1, -1, scores.shape[2]])
     score = torch.mean(torch.gather(scores, 1, idx_score), dim=1)
+    return score, torch.stack(feats), scores
+
+    #features = features.permute(1, 0, 2, 3)
+
+    #idx_score = idx.unsqueeze(2).expand([-1, -1, scores.shape[2]])
+    #score = torch.mean(torch.gather(scores, 1, idx_score), dim=1)
+
+    #nor_score = score[:batch_size]
+
+    #temp = {}
+    #total_select_feature = torch.zeros(0)
+    #for i in range(batch_size):
+    #    if i >= features.shape[0]:
+    #        break
+    #    feat_select = torch.gather(features[i], 1, idx_feat[i].unsqueeze(0).expand([ncrops, -1, -1]))
+    #    for j in range(ncrops):
+    #        temp[j] = temp.get(j, []) + [feat_select[j].unsqueeze(0)]
+    #for j in range(ncrops):
+    #    temp[j] = torch.cat(temp[j])  
+    #nor_mag = torch.cat(list(temp.values()))
     
-    return score[batch_size:], score[:batch_size], total_select_feature[:batch_size * ncrops], total_select_feature[batch_size * ncrops:], scores
+    #if bs != 1:
+    #    temp = {}
+    #    total_select_feature = torch.zeros(0)
+    #    for i in range(batch_size, bs):
+    #        feat_select = torch.gather(features[i], 1, idx_feat[i].unsqueeze(0).expand([ncrops, -1, -1]))
+    #        for j in range(ncrops):
+    #            temp[j] = temp.get(j, []) + [feat_select[j].unsqueeze(0)]
+    #    for j in range(ncrops):
+    #        temp[j] = torch.cat(temp[j])  
+    #    abn_mag = torch.cat(list(temp.values()))
+    #    abn_score = score[batch_size:]
+    #else:
+    #    abn_mag = nor_mag
+    #    abn_score = nor_score
+    #total_select_feature = torch.zeros(0)
+    #for i, feature in enumerate(features):
+    #    feat_select = torch.gather(feature, 1, idx_feat[i].unsqueeze(0).expand([ncrops, -1, -1]))
+    #    total_select_feature = torch.cat((total_select_feature, feat_select))
+
+    #nor_mag = total_select_feature[:batch_size * ncrops]
+    #abn_mag = total_select_feature[batch_size * ncrops:]
+
+    #return nor_score, abn_score, nor_mag, abn_mag, scores
 
 class Backbone(nn.Module):
     def __init__(
@@ -126,25 +164,25 @@ class Backbone(nn.Module):
         depth,
         heads,
         mgfn_type = 'gb',
-        kernel = 5,
-        dim_headnumber = 64,
+        kernel = 7,
+        dim_headnumber = 16,
         ff_repe = 4,
         dropout = 0.,
         attention_dropout = 0.
     ):
         super().__init__()
-
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             if mgfn_type == 'fb':
                 attention = FOCUS(dim, heads = heads, dim_head = dim_headnumber, local_aggr_kernel = kernel)
+                #attention = FOCUS(dim, heads = heads, dim_head = dim_headnumber, dropout = attention_dropout)
             elif mgfn_type == 'gb':
                 attention = GLANCE(dim, heads = heads, dim_head = dim_headnumber, dropout = attention_dropout)
             else:
                 raise ValueError('unknown mhsa_type')
 
             self.layers.append(nn.ModuleList([
-                nn.Conv1d(dim, dim, 3, padding = 1),
+                nn.Conv1d(dim, dim, kernel, padding = kernel // 2),
                 #nn.Conv1d(dim, dim, 3, padding = 1),
                 attention,
                 FeedForward(dim, repe = ff_repe, dropout = dropout),
@@ -170,12 +208,12 @@ class mgfn(nn.Module):
         #mgfn_types = (args.mgfn_type1,args.mgfn_type2, args.mgfn_type3),
         #depths = (args.depths1, args.depths2),
         #mgfn_types = (args.mgfn_type1, args.mgfn_type2),
-        depths = (3, 3),
+        depths = (4, 4),
         mgfn_types = ("gb", "fb"),
         lokernel = 5,
         channels = 2048,
         ff_repe = 4,
-        dim_head = 64,
+        dim_head = 16,
         dropout = 0.,
         attention_dropout = 0.
     ):
@@ -239,7 +277,7 @@ class mgfn(nn.Module):
             print("Unable to initalize weights for layer: " + str(type(m)))
     def forward(self, video):
         
-        k = 3
+        k = 4
         bs, ncrops, t, c = video.size()
         x = video.view(bs * ncrops, t, c).permute(0, 2, 1)
         x_f = x[:,:2048,:]
@@ -253,9 +291,10 @@ class mgfn(nn.Module):
                 x_f = conv(x_f)
 
         x_f = x_f.permute(0, 2, 1)
-        x =  self.to_logits(x_f)
+        x = self.to_logits(x_f)
         #scores = self.fc(x).squeeze()
-        scores = self.sigmoid(self.fc(x))
+        scores = self.fc(x)
+        #scores = self.sigmoid(self.fc(x))
         #scores = scores.view(args.seg_length, bs, ncrops)
         #scores = self.fc2(scores).squeeze(dim=2)
         #scores = self.sigmoid(scores)
@@ -281,10 +320,11 @@ class mgfn(nn.Module):
         #print(x)
         #print(scores.shape)
         #print(scores)
+
+        scores, feats, scores_  = MSNSD(x,scores, bs, self.batch_size, self.drop_out, ncrops, k, self.training)
+        return scores, feats, scores_
+
         score_normal, score_abnormal, nor_feamagnitude, abn_feamagnitude, _  = MSNSD(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
-        _, sn, _, _, scores = MSNSD_(x,scores,bs,self.batch_size,self.drop_out,ncrops,k)
-        print(score_normal)
-        print(sn)
         #print(score_abnormal.shape)
         #print(score_abnormal)
         #print(score_normal.shape)

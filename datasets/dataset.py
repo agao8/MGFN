@@ -28,11 +28,11 @@ class Dataset(data.Dataset):
         if self.test_mode is False:
             if args.datasetname == 'UCF':
                 if self.is_normal:
-                    self.list = self.list[:800] # self.list[810:]
+                    self.list = self.list[810:] # self.list[810:]
                     #print('normal list')
                     #print(self.list)
                 else:
-                    self.list = self.list[800:]
+                    self.list = self.list[:810]
                     #print('abnormal list')
                     #print(self.list)
 
@@ -47,7 +47,7 @@ class Dataset(data.Dataset):
 
         if self.test_mode:
             if "Normal" not in name:
-                label = 1
+                label = torch.tensor(1.0)
         if False:
             if args.datasetname == 'UCF':
                 mag = np.linalg.norm(features, axis=2)[:,:, np.newaxis]
@@ -78,9 +78,9 @@ class Dataset(data.Dataset):
         if self.is_normal:
         #if "Normal" in self.list[index]:
             # label[0] = 1
-            label = torch.tensor(0)
+            label = torch.tensor(0.0)
         else:
-            label = torch.tensor(1)
+            label = torch.tensor(1.0)
             # label[1] = 1
         return label
 

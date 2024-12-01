@@ -21,7 +21,7 @@ def test(dataloader, model, args, device):
         #featurelen =[]
         labels = []
         class_results = {}
-        for i, inputs in tqdm(enumerate(dataloader)):
+        for _, inputs in tqdm(enumerate(dataloader)):
             labels += inputs[1].cpu().detach().tolist()
             atypes = inputs[2].cpu().detach().tolist()
             input = inputs[0].to(device)
@@ -30,7 +30,7 @@ def test(dataloader, model, args, device):
             #featurelen_i = []
             #for c  in input.chunk((input.shape[2] // 2000) + 1, 2):
             #for c in [input]:
-            #sa, sn, _, _, logits = model(input)
+            scores, _, _ = model(input)
                 #print(sa)
                 #print(sn)
                 #print()
@@ -49,12 +49,12 @@ def test(dataloader, model, args, device):
                 #pred = np.concatenate((pred, np.repeat(np.array(np.mean(sig)), featurelen_i)))
                 #pred = np.concatenate((pred, sig.cpu().detach().numpy().squeeze()))
                 #pred.append(sig.cpu().detach().numpy().squeeze().mean())
-            scores, _ = model(input)
-            pred_ = torch.argmax(scores.cpu().detach(), dim=1).tolist()
-            #pred_ = sa.cpu().detach().numpy().squeeze()
+            #scores, _ = model(input)
+            #pred_ = torch.argmax(scores.cpu().detach(), dim=1).tolist()
+            pred_ = scores.cpu().detach().tolist()
             pred += pred_
             for i, atype in enumerate(atypes):
-                class_results[atype] = np.append(class_results.get(atype, np.array([])), (pred_[i]))
+                class_results[atype] = np.append(class_results.get(atype, np.array([])), pred_[i])
             #featurelen += featurelen_i
         #gt = np.load(args.gt)
         #pred = list(pred.cpu().detach().numpy())

@@ -26,6 +26,34 @@ class ContrastiveLoss(nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
+    def forward_(self, feats):
+        b = args.batch_size
+        n_f = feats[:b]
+        a_f = feats[b:]
+        max_n, max_a, max_d = -1, -1, 999999
+        for i, n in enumerate(n_f):
+            for j, a in enumerate(a_f):
+                d = torch.mean(torch.pow(torch.clamp(self.margin - F.pairwise_distance(n, a, keepdim=True), min=0.0), 2))
+                if d < max_d:
+                    max_n, max_a, max_d = i, j, d
+        #print(self.margin - F.pairwise_distance(n_f[max_n], a_f[max_a], keepdim=True))
+        #print(max_n, max_a, max_d)
+        loss_con = 0.01 * max_d
+        loss_n = 0
+        for i, f in enumerate(n_f):
+            if i != max_n:
+                d = F.pairwise_distance(f, n_f[max_n], keepdim=True)
+                loss_n += torch.mean(torch.pow(d, 2))
+        loss_a = 0
+        for i, f in enumerate(a_f):
+            if i != max_a:
+                d = F.pairwise_distance(f, a_f[max_a], keepdim=True)
+                #print(0.001 * torch.mean(torch.pow(d, 2)))
+                loss_a += torch.mean(torch.pow(d, 2))
+        print(loss_n, loss_a, loss_con)
+        print(loss_con + loss_n + loss_a)
+        return loss_con + loss_n + loss_a
+
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2, keepdim=True)
         loss_contrastive = torch.mean((1-label) * torch.pow(euclidean_distance, 2) +
@@ -50,19 +78,30 @@ class mgfn_loss(torch.nn.Module):
         super(mgfn_loss, self).__init__()
         self.alpha = alpha
         self.sigmoid = torch.nn.Sigmoid()
-        self.criterion = torch.nn.CrossEntropyLoss()
+        self.criterion = torch.nn.BCEWithLogitsLoss()
         self.contrastive = ContrastiveLoss()
 
     def forward(self, scores, feats, targets):
         loss_cls = self.criterion(scores, targets)
         bs = args.batch_size
-        n_feats = feats[:bs]
-        a_feats = feats[bs:]
-        loss_con = self.contrastive(n_feats, a_feats, 1)
-        loss_con_n = self.contrastive(n_feats[:bs // 2], n_feats[bs // 2:], 0)
-        loss_con_a = self.contrastive(a_feats[:bs // 2], a_feats[bs // 2:], 0)
-        return loss_cls
-        return loss_cls + 0.003 * (loss_con + loss_con_a + loss_con_n)
+        loss_con = 0
+        #loss_con = self.contrastive(torch.norm(feats, p=1, dim=2))
+        for i in range(len(scores)):
+            for j in range(i):
+                label = 1 if targets[i] != targets[j] else 0
+                weight = 0.001 if targets[i] != targets[j] else 1
+                #weight = 1
+                loss_con += weight * self.contrastive(feats[i], feats[j], label) / bs
+        #print(loss_cls, 0.001 * loss_con, loss_cls + 0.001 * loss_con)
+        return loss_cls + 0.001 * loss_con
+
+        # n_feats = feats[:bs]
+        # a_feats = feats[bs:]
+        # loss_con = self.contrastive(n_feats, a_feats, 1)
+        # loss_con_n = self.contrastive(n_feats[:bs // 2], n_feats[bs // 2:], 0)
+        # loss_con_a = self.contrastive(a_feats[:bs // 2], a_feats[bs // 2:], 0)
+        # print(loss_cls, 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n), loss_cls + 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n))
+        # return loss_cls + 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n)
 
 
     def forward_(self, score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude):
@@ -109,11 +148,13 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
             #print(feats)
             #print(output)
             
-            scores, feats = model(input)
+            #scores, feats = model(input)
 
-            #loss_sparse = sparsity(scores[:batch_size,:,:].view(-1), batch_size, 8e-3)
             
-            #loss_smooth = smooth(scores,8e-4)
+            scores, feats, scores_ = model(input) 
+            loss_sparse = sparsity(scores_[:batch_size,:,:].view(-1), batch_size, 8e-3)
+            
+            loss_smooth = smooth(scores_,8e-4)
 
             #scores = scores.view(batch_size * 32 * 2, -1)
             #scores = scores.squeeze()
@@ -125,7 +166,7 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
             #alabel = alabel[0:batch_size]
 
             loss_criterion = mgfn_loss(0.0001)
-            cost = loss_criterion(scores, feats, labels)
+            cost = loss_criterion(scores.squeeze(), feats, labels) + loss_smooth + loss_sparse
 
             #cost = loss_criterion(score_normal, score_abnormal, nlabel, alabel, nor_feamagnitude, abn_feamagnitude) + loss_smooth + loss_sparse
 
