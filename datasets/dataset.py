@@ -38,41 +38,32 @@ class Dataset(data.Dataset):
 
     def __getitem__(self, index):
         label = self.get_label(index)  # get video level label 0/1
-        if args.datasetname == 'UCF':
-            features = np.load(self.list[index].strip('\n'), allow_pickle=True)
-            features = np.array(features, dtype=np.float32)
-            name = self.list[index].split('/')[-1].strip('\n')[:-4]
+        features = np.load(self.list[index].strip('\n'), allow_pickle=True)
+        features = np.array(features, dtype=np.float32)
+        name = self.list[index].split('/')[-1].strip('\n')[:-4]
+        
         if self.tranform is not None:
             features = self.tranform(features)
 
         if self.test_mode:
             if "Normal" not in name:
                 label = torch.tensor(1.0)
-        if False:
-            if args.datasetname == 'UCF':
-                mag = np.linalg.norm(features, axis=2)[:,:, np.newaxis]
-                features = np.concatenate((features,mag),axis = 2)
-            elif args.datasetname == 'XD':
-                mag = np.linalg.norm(features, axis=1)[:, np.newaxis]
-                features = np.concatenate((features, mag), axis=1)
-            return features, name, label
-        else:
-            if args.datasetname == 'UCF':
-                if self.is_preprocessed:
-                    return features, label
-                features = features.transpose(1, 0, 2)  # [10, T, F]
-                divided_features = []
 
-                divided_mag = []
-                for feature in features:
-                    feature = process_feat(feature, args.seg_length) #ucf(32,2048)
-                    divided_features.append(feature)
-                    divided_mag.append(np.linalg.norm(feature, axis=1)[:, np.newaxis])
-                divided_features = np.array(divided_features, dtype=np.float32)
-                divided_mag = np.array(divided_mag, dtype=np.float32)
-                divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
-                return divided_features, label, self.get_type(index)
-            return
+        if self.is_preprocessed:
+            return features, label
+        
+        features = features.transpose(1, 0, 2)  # [10, T, F]
+        divided_features = []
+
+        divided_mag = []
+        for feature in features:
+            feature = process_feat(feature, args.seg_length) #ucf(32,2048)
+            divided_features.append(feature)
+            divided_mag.append(np.linalg.norm(feature, axis=1)[:, np.newaxis])
+        divided_features = np.array(divided_features, dtype=np.float32)
+        divided_mag = np.array(divided_mag, dtype=np.float32)
+        divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
+        return divided_features, label, self.get_type(index)
 
     def get_label(self, index):
         if self.is_normal:

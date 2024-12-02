@@ -40,10 +40,10 @@ if __name__ == '__main__':
     args=option.parse_args()
     config = Config(args)
     g = torch.Generator('cuda')
-    #random.seed(2024)
-    #np.random.seed(2024)
+    random.seed(2024)
+    np.random.seed(2024)
     g.manual_seed(2024)
-    #torch.cuda.manual_seed(2024)
+    torch.cuda.manual_seed(2024)
     train_nloader = DataLoader(Dataset(args, test_mode=False, is_normal=True),
                                batch_size=args.batch_size, shuffle=False,
                                num_workers=args.workers, pin_memory=False, drop_last=True,
