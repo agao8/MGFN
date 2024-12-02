@@ -82,8 +82,8 @@ if __name__ == '__main__':
     device = torch.device("cuda")
     model = Model()
     test_loader = DataLoader(Dataset(args, test_mode=True),
-                              batch_size=1, shuffle=False,
+                              batch_size=16, shuffle=False,
                               num_workers=0, pin_memory=False)
     model = model.to(device)
-    model_dict = model.load_state_dict({k.replace('module.', ''): v for k, v in torch.load('mgfnfinal.pkl').items()})
+    model_dict = model.load_state_dict({k.replace('module.', ''): v for k, v in torch.load('saved_models/contrastive_deform_best.pkl').items()})
     auc = test(test_loader, model, args, device)

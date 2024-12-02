@@ -26,7 +26,7 @@ class ContrastiveLoss(nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward_(self, feats):
+    def forward(self, feats):
         b = args.batch_size
         n_f = feats[:b]
         a_f = feats[b:]
@@ -38,23 +38,23 @@ class ContrastiveLoss(nn.Module):
                     max_n, max_a, max_d = i, j, d
         #print(self.margin - F.pairwise_distance(n_f[max_n], a_f[max_a], keepdim=True))
         #print(max_n, max_a, max_d)
-        loss_con = 0.01 * max_d
+        loss_con = 0.001 * max_d
         loss_n = 0
         for i, f in enumerate(n_f):
             if i != max_n:
                 d = F.pairwise_distance(f, n_f[max_n], keepdim=True)
-                loss_n += torch.mean(torch.pow(d, 2))
+                loss_n += 1 * torch.mean(torch.pow(d, 2)) / b
         loss_a = 0
         for i, f in enumerate(a_f):
             if i != max_a:
                 d = F.pairwise_distance(f, a_f[max_a], keepdim=True)
                 #print(0.001 * torch.mean(torch.pow(d, 2)))
-                loss_a += torch.mean(torch.pow(d, 2))
-        print(loss_n, loss_a, loss_con)
-        print(loss_con + loss_n + loss_a)
+                loss_a += 1 * torch.mean(torch.pow(d, 2)) / b
+        #print(loss_n, loss_a, loss_con)
+        #print(loss_con + loss_n + loss_a)
         return loss_con + loss_n + loss_a
 
-    def forward(self, output1, output2, label):
+    def forward_(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2, keepdim=True)
         loss_contrastive = torch.mean((1-label) * torch.pow(euclidean_distance, 2) +
                                       (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
@@ -83,24 +83,28 @@ class mgfn_loss(torch.nn.Module):
 
     def forward(self, scores, feats, targets):
         loss_cls = self.criterion(scores, targets)
-        bs = args.batch_size
-        loss_con = 0
-        #loss_con = self.contrastive(torch.norm(feats, p=1, dim=2))
-        for i in range(len(scores)):
-            for j in range(i):
-                label = 1 if targets[i] != targets[j] else 0
-                weight = 0.001 if targets[i] != targets[j] else 1
-                #weight = 1
-                loss_con += weight * self.contrastive(feats[i], feats[j], label) / bs
+        #bs = args.batch_size
+        #loss_con = 0
+
+        loss_con = self.contrastive(torch.norm(feats, p=1, dim=2))
         #print(loss_cls, 0.001 * loss_con, loss_cls + 0.001 * loss_con)
         return loss_cls + 0.001 * loss_con
+    
+        # for i in range(len(scores)):
+        #     for j in range(i):
+        #         label = 1 if targets[i] != targets[j] else 0
+        #         weight = 0.001 if targets[i] != targets[j] else 1
+        #         #weight = 1
+        #         loss_con += weight * self.contrastive(feats[i], feats[j], label) / bs
+        # #print(loss_cls, 0.001 * loss_con, loss_cls + 0.001 * loss_con)
+        # return loss_cls + 0.001 * loss_con
 
         # n_feats = feats[:bs]
         # a_feats = feats[bs:]
         # loss_con = self.contrastive(n_feats, a_feats, 1)
         # loss_con_n = self.contrastive(n_feats[:bs // 2], n_feats[bs // 2:], 0)
         # loss_con_a = self.contrastive(a_feats[:bs // 2], a_feats[bs // 2:], 0)
-        # print(loss_cls, 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n), loss_cls + 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n))
+        # #print(loss_cls, 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n), loss_cls + 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n))
         # return loss_cls + 0.001 * (0.001 * loss_con + loss_con_a + loss_con_n)
 
 

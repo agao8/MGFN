@@ -144,15 +144,15 @@ class FOCUS(nn.Module):
         dim,
         heads,
         dim_head = 64,
-        local_aggr_kernel = 7
+        local_aggr_kernel = 3
     ):
         super().__init__()
         self.heads = heads
         inner_dim = dim_head * heads
         self.norm = nn.BatchNorm1d(dim)
-        self.to_v = nn.Conv1d(dim, inner_dim, 1, bias = False)
-        self.rel_pos = nn.Conv1d(heads, heads, local_aggr_kernel, padding = local_aggr_kernel // 2, groups = heads)
-        self.to_out = nn.Conv1d(inner_dim, dim, 1)
+        # self.to_v = nn.Conv1d(dim, inner_dim, 1, bias = False)
+        # self.rel_pos = nn.Conv1d(heads, heads, local_aggr_kernel, padding = local_aggr_kernel // 2, groups = heads)
+        # self.to_out = nn.Conv1d(inner_dim, dim, 1)
         self.bs = 2 * args.batch_size
         self.offset = torch.rand(self.bs, 2 * heads * local_aggr_kernel * local_aggr_kernel, 10, args.seg_length)
         self.mask = torch.rand(self.bs, heads * local_aggr_kernel * local_aggr_kernel, 10, args.seg_length)
@@ -161,7 +161,7 @@ class FOCUS(nn.Module):
 
     def forward(self, x):
         x = self.norm(x) #(b*crop,c,t)
-        #b, c, *_, h = *x.shape, self.heads
+
         b, c, t = x.shape
         x = x.view(b // 10, 10, c, t)
         x = x.permute(0, 2, 1, 3)
@@ -173,15 +173,13 @@ class FOCUS(nn.Module):
         x = x.permute(0, 2, 1, 3)
         x = x.reshape(b, c, t)
         return x
-        #print(x.shape)
-        #v = self.to_v(x) #(b*crop,c,t)
-        #v = rearrange(v, 'b (c h) ... -> (b c) h ...', h = h) #(b*ten*64,c/64,32)
-        #out = self.rel_pos(v)
-        #out = rearrange(out, '(b c) h ... -> b (c h) ...', b = b)
-        #print(x.shape)
-        #print(x.shape)
-        #return
-        #return self.to_out(out)
+    
+        # b, c, *_, h = *x.shape, self.heads
+        # v = self.to_v(x) #(b*crop,c,t)
+        # v = rearrange(v, 'b (c h) ... -> (b c) h ...', h = h) #(b*ten*64,c/64,32)
+        # out = self.rel_pos(v)
+        # out = rearrange(out, '(b c) h ... -> b (c h) ...', b = b)
+        # return self.to_out(out)
     
     # def __init__(
     #     self,

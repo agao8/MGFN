@@ -25,12 +25,12 @@ def parse_args():
     parser.add_argument('--depths2', type=int, default=3, help='depths2')
     parser.add_argument('--depths3', type=int, default=2, help='depths3')
 
-    parser.add_argument('--mgfn_type1', default='gb', help='mgfn_types1')
-    parser.add_argument('--mgfn_type2', default='fb', help='mgfn_types2')
-    parser.add_argument('--mgfn_type3', default='fb', help='mgfn_types3')
+    # parser.add_argument('--mgfn_type1', default='gb', help='mgfn_types1')
+    # parser.add_argument('--mgfn_type2', default='fb', help='mgfn_types2')
+    # parser.add_argument('--mgfn_type3', default='fb', help='mgfn_types3')
 
     #dropout rate
-    parser.add_argument('--dropout_rate', type=float, default=0.4, help='dropout rate')
+    parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
 
 
     parser.add_argument('--gpus', type=str, default='0', help='gpus')
