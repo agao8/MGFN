@@ -30,7 +30,7 @@ def parse_args():
     # parser.add_argument('--mgfn_type3', default='fb', help='mgfn_types3')
 
     #dropout rate
-    parser.add_argument('--dropout_rate', type=float, default=0.3, help='dropout rate')
+    parser.add_argument('--dropout_rate', type=float, default=0.4, help='dropout rate')
 
 
     parser.add_argument('--gpus', type=str, default='0', help='gpus')

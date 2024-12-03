@@ -8,20 +8,14 @@ args=option.parse_args()
 def exists(val):
     return val is not None
 
-
-# def attention(q, k, v):
-#     sim = einsum('b i d, b j d -> b i j', q, k)
-#     attn = sim.softmax(dim=-1)
-#     out = einsum('b i j, b j d -> b i d', attn, v)
-#     return out
-
 def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k,training):
    
     features = features
     bc, t, f = features.size()
 
-    scores = scores.view(bs, ncrops, -1).mean(1)
-    scores = scores.unsqueeze(dim=2)
+    #scores = scores.view(bs, ncrops, -1).mean(1)
+    #scores = scores.unsqueeze(dim=2)
+    scores = scores.view(bs, ncrops, 32, 14).mean(1)
 
     feat_magnitudes = torch.norm(features, p=2, dim=2)  # [b*ten,32]
     feat_magnitudes = feat_magnitudes.view(bs, ncrops, -1).mean(1)  # [b,32]
@@ -89,7 +83,7 @@ class mgfn(nn.Module):
         self,
         *,
         classes=0,
-        dims = (64, 128),
+        dims = (128, 256),
         depths = (3, 3),
         mgfn_types = ("gb", "fb"),
         lokernel = 5,
@@ -132,7 +126,7 @@ class mgfn(nn.Module):
             nn.LayerNorm(last_dim)
         )
         self.batch_size =  args.batch_size
-        self.fc = nn.Linear(last_dim, 1)
+        self.fc = nn.Linear(last_dim, 1 if classes == 2 else classes)
         self.sigmoid = nn.Sigmoid()
         self.drop_out = nn.Dropout(args.dropout_rate)
 
@@ -168,9 +162,8 @@ class mgfn(nn.Module):
 
         x_f = x_f.permute(0, 2, 1)
         x = self.to_logits(x_f)
-        scores = self.fc(x)
-
-        scores, feats, scores_  = MSNSD(x,scores, bs, self.batch_size, self.drop_out, ncrops, k, self.training)
+        logits = self.fc(x)
+        scores, feats, scores_  = MSNSD(x,logits, bs, self.batch_size, self.drop_out, ncrops, k, self.training)
         return scores, feats, scores_
 
 

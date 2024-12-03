@@ -63,7 +63,7 @@ class Dataset(data.Dataset):
         divided_features = np.array(divided_features, dtype=np.float32)
         divided_mag = np.array(divided_mag, dtype=np.float32)
         divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
-        return divided_features, label, self.get_type(index)
+        return divided_features, self.get_type(index), self.get_type(index)
 
     def get_label(self, index):
         if self.is_normal:
@@ -78,7 +78,7 @@ class Dataset(data.Dataset):
     def get_type(self, index):
         for i, atype in enumerate(classes):
             if atype in self.list[index]:
-                return i
+                return torch.tensor(i)
         return -1
 
     def __len__(self):

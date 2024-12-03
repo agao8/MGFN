@@ -57,7 +57,7 @@ if __name__ == '__main__':
                              num_workers=0, pin_memory=False,
                              generator = g)
 
-    model = mgfn(dropout = args.dropout_rate, classes = 2, attention_dropout = args.dropout_rate)
+    model = mgfn(dropout = args.dropout_rate, classes = 14, attention_dropout = args.dropout_rate)
     if args.pretrained_ckpt is not None:
         model_ckpt = torch.load(args.pretrained_ckpt)
         model.load_state_dict(model_ckpt)
@@ -71,7 +71,8 @@ if __name__ == '__main__':
 
     optimizer = optim.Adam(model.parameters(),
                             lr=config.lr[0], weight_decay=0.0005)
-    test_info = {"epoch": [], "test_AUC": [], "test_PR":[]}
+    #test_info = {"epoch": [], "test_AUC": [], "test_PR":[]}
+    test_info = {"epoch": [], "top1": [], "top3":[], "top5":[]}
 
     best_AUC = -1
     best_PR = -1 # put your own path here
@@ -95,21 +96,22 @@ if __name__ == '__main__':
         log_writer.add_scalar('loss_contrastive', cost, step)
 
         if step % 1 == 0 and step > 0:
-            auc, pr_auc = test(test_loader, model, args, device)
-            log_writer.add_scalar('auc-roc', auc, step)
-            log_writer.add_scalar('pr_auc', pr_auc, step)
+            #auc, pr_auc = test(test_loader, model, args, device)
+            #log_writer.add_scalar('auc-roc', auc, step)
+            #log_writer.add_scalar('pr_auc', pr_auc, step)
+            top1, top3, top5 = test(test_loader, model, args, device)
+            log_writer.add_scalar('top-1', top1, step)
+            log_writer.add_scalar('top-3', top3, step)
+            log_writer.add_scalar('top-5', top5, step)
 
             test_info["epoch"].append(step)
-            test_info["test_AUC"].append(auc)
-            test_info["test_PR"].append(pr_auc)
-            if args.datasetname == 'XD':
-                if test_info["test_PR"][-1] > best_PR:
-                    best_PR = test_info["test_PR"][-1]
-                    torch.save(model.state_dict(), savepath + '/' + args.model_name + '{}-i3d.pkl'.format(step))
-                    save_best_record(test_info, os.path.join(savepath + "/", '{}-step-AUC.txt'.format(step)))
-            else:
-                if test_info["test_AUC"][-1] > best_AUC :
-                    best_AUC = test_info["test_AUC"][-1]
-                    torch.save(model.state_dict(), savepath + '/' + args.model_name + '{}-i3d.pkl'.format(step))
-                    save_best_record(test_info, os.path.join(savepath + "/", '{}-step-AUC.txt'.format(step)))
+            test_info["top1"].append(top1)
+            test_info["top3"].append(top3)
+            test_info["top5"].append(top5)
+            #test_info["test_AUC"].append(auc)
+            #test_info["test_PR"].append(pr_auc)
+            #if test_info["test_AUC"][-1] > best_AUC :
+            #    best_AUC = test_info["test_AUC"][-1]
+            torch.save(model.state_dict(), savepath + '/' + args.model_name + '{}-i3d.pkl'.format(step))
+            save_best_record(test_info, os.path.join(savepath + "/", '{}-step.txt'.format(step)))
     torch.save(model.state_dict(), './ckpt/' + args.model_name + 'final.pkl')

@@ -78,7 +78,8 @@ class mgfn_loss(torch.nn.Module):
         super(mgfn_loss, self).__init__()
         self.alpha = alpha
         self.sigmoid = torch.nn.Sigmoid()
-        self.criterion = torch.nn.BCEWithLogitsLoss()
+        #self.criterion = torch.nn.BCEWithLogitsLoss()
+        self.criterion = torch.nn.CrossEntropyLoss()
         self.contrastive = ContrastiveLoss()
 
     def forward(self, scores, feats, targets):
@@ -146,7 +147,7 @@ def train(nloader, aloader, model, batch_size, optimizer, device,iterator = 0):
             labels = torch.cat((nlabel, alabel), 0).to(device)
 
             loss_criterion = mgfn_loss(0.0001)
-            cost = loss_criterion(scores.squeeze(), feats, labels) + loss_smooth + loss_sparse
+            cost = loss_criterion(scores, feats, labels) + loss_smooth + loss_sparse
 
             optimizer.zero_grad()
             cost.backward()

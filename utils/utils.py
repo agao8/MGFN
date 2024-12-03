@@ -100,8 +100,11 @@ def modelsize(model, input, type_size=4):
 def save_best_record(test_info, file_path):
     fo = open(file_path, "w")
     fo.write("epoch: {}\n".format(test_info["epoch"][-1]))
-    fo.write(str(test_info["test_AUC"][-1]))
-    fo.write(str(test_info["test_PR"][-1]))
+    #fo.write(str(test_info["test_AUC"][-1]))
+    #fo.write(str(test_info["test_PR"][-1]))
+    fo.write(str(test_info["top1"][-1]))
+    fo.write(str(test_info["top3"][-1]))
+    fo.write(str(test_info["top5"][-1]))
     fo.close()
 
 class LayerNorm(nn.Module):
@@ -180,46 +183,6 @@ class FOCUS(nn.Module):
         # out = self.rel_pos(v)
         # out = rearrange(out, '(b c) h ... -> b (c h) ...', b = b)
         # return self.to_out(out)
-    
-    # def __init__(
-    #     self,
-    #     dim,
-    #     heads,
-    #     dim_head = 64,
-    #     dropout = 0.
-    # ):
-    #     super().__init__()
-    #     self.heads = heads
-    #     self.scale = dim_head ** -0.5
-    #     inner_dim = dim_head * heads
-    #     self.inner_dim = inner_dim
-    #     self.norm = LayerNorm(dim)
-    #     self.dim = dim
-    #     self.to_qkv = nn.Conv1d(dim, inner_dim * 3, 1, bias = False)
-    #     self.to_out = nn.Conv1d(inner_dim, dim, 1)
-    #     self.attn =0
-    #     self.mha = nn.MultiheadAttention(args.seg_length, self.heads, dropout=dropout)
-
-    # def forward(self, x):
-    #     x = self.norm(x)
-    #     #print(x.shape)
-    #     shape, h = x.shape, self.heads
-    #     x = rearrange(x, 'b c ... -> b c (...)')
-    #     print(x.shape)
-    #     q, k, v = self.to_qkv(x).chunk(3, dim = 1)
-    #     q, k, v = map(lambda t: rearrange(t, 'b (h d) n -> b h n d', h = h), (q, k, v))
-    #     print(q.shape)
-    #     print(k.shape)
-    #     print(v.shape)
-    #     q, k, v = q.squeeze(1), k.squeeze(1), v.squeeze(1)
-    #     q, k, v = q.permute(0, 2, 1), k.permute(0, 2, 1), v.permute(0, 2, 1)
-    #     print(q.shape)
-    #     print(k.shape)
-    #     print(v.shape)
-    #     out = self.mha(q, k, v, need_weights=False)[0]
-    #     print(out.shape)
-    #     return None
-    #     return out.permute(0, 2, 1)
 
 
 class GLANCE(nn.Module):
