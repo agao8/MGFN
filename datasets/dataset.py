@@ -18,10 +18,10 @@ class Dataset(data.Dataset):
             self.rgb_list_file = args.rgb_list
         self.tranform = transform
         self.test_mode = test_mode
-        self._parse_list()
         self.num_frame = 0
         self.labels = None
         self.is_preprocessed = args.preprocessed
+        self._parse_list()
 
     def _parse_list(self):
         self.list = list(open(self.rgb_list_file))
@@ -63,7 +63,7 @@ class Dataset(data.Dataset):
         divided_features = np.array(divided_features, dtype=np.float32)
         divided_mag = np.array(divided_mag, dtype=np.float32)
         divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
-        return divided_features, self.get_type(index), self.get_type(index)
+        return divided_features, label, self.get_type(index)
 
     def get_label(self, index):
         if self.is_normal:

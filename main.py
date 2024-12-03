@@ -57,7 +57,7 @@ if __name__ == '__main__':
                              num_workers=0, pin_memory=False,
                              generator = g)
 
-    model = mgfn(dropout = args.dropout_rate, classes = 14, attention_dropout = args.dropout_rate)
+    model = mgfn(dropout = args.dropout_rate, classes = 2, attention_dropout = args.dropout_rate)
     if args.pretrained_ckpt is not None:
         model_ckpt = torch.load(args.pretrained_ckpt)
         model.load_state_dict(model_ckpt)

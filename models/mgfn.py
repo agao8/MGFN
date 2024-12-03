@@ -13,9 +13,9 @@ def MSNSD(features,scores,bs,batch_size,drop_out,ncrops,k,training):
     features = features
     bc, t, f = features.size()
 
-    #scores = scores.view(bs, ncrops, -1).mean(1)
-    #scores = scores.unsqueeze(dim=2)
-    scores = scores.view(bs, ncrops, 32, 14).mean(1)
+    scores = scores.view(bs, ncrops, -1).mean(1)
+    scores = scores.unsqueeze(dim=2)
+    #scores = scores.view(bs, ncrops, 32, 14).mean(1)
 
     feat_magnitudes = torch.norm(features, p=2, dim=2)  # [b*ten,32]
     feat_magnitudes = feat_magnitudes.view(bs, ncrops, -1).mean(1)  # [b,32]
@@ -82,8 +82,8 @@ class mgfn(nn.Module):
     def __init__(
         self,
         *,
-        classes=0,
-        dims = (128, 256),
+        classes=2,
+        dims = (64, 128),
         depths = (3, 3),
         mgfn_types = ("gb", "fb"),
         lokernel = 5,
