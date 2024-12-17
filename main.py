@@ -71,8 +71,8 @@ if __name__ == '__main__':
 
     optimizer = optim.Adam(model.parameters(),
                             lr=config.lr[0], weight_decay=0.0005)
-    #test_info = {"epoch": [], "test_AUC": [], "test_PR":[]}
-    test_info = {"epoch": [], "top1": [], "top3":[], "top5":[]}
+    test_info = {"epoch": [], "test_AUC": [], "test_PR":[]}
+    #test_info = {"epoch": [], "top1": [], "top3":[], "top5":[]}
 
     best_AUC = -1
     best_PR = -1 # put your own path here
@@ -96,20 +96,20 @@ if __name__ == '__main__':
         log_writer.add_scalar('loss_contrastive', cost, step)
 
         if step % 1 == 0 and step > 0:
-            #auc, pr_auc = test(test_loader, model, args, device)
-            #log_writer.add_scalar('auc-roc', auc, step)
-            #log_writer.add_scalar('pr_auc', pr_auc, step)
-            top1, top3, top5 = test(test_loader, model, args, device)
-            log_writer.add_scalar('top-1', top1, step)
-            log_writer.add_scalar('top-3', top3, step)
-            log_writer.add_scalar('top-5', top5, step)
+            auc, pr_auc = test(test_loader, model, args, device)
+            log_writer.add_scalar('auc-roc', auc, step)
+            log_writer.add_scalar('pr_auc', pr_auc, step)
+            #top1, top3, top5 = test(test_loader, model, args, device)
+            #log_writer.add_scalar('top-1', top1, step)
+            #log_writer.add_scalar('top-3', top3, step)
+            #log_writer.add_scalar('top-5', top5, step)
 
             test_info["epoch"].append(step)
-            test_info["top1"].append(top1)
-            test_info["top3"].append(top3)
-            test_info["top5"].append(top5)
-            #test_info["test_AUC"].append(auc)
-            #test_info["test_PR"].append(pr_auc)
+            #test_info["top1"].append(top1)
+            #test_info["top3"].append(top3)
+            #test_info["top5"].append(top5)
+            test_info["test_AUC"].append(auc)
+            test_info["test_PR"].append(pr_auc)
             #if test_info["test_AUC"][-1] > best_AUC :
             #    best_AUC = test_info["test_AUC"][-1]
             torch.save(model.state_dict(), savepath + '/' + args.model_name + '{}-i3d.pkl'.format(step))

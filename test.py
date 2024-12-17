@@ -15,11 +15,11 @@ classes = ["Normal", "Abuse", "Arrest", "Arson", "Assault", "Burglary", "Explosi
 
 MODEL_LOCATION = 'saved_models/'
 MODEL_NAME = 'triplet_deform_best'
-MODEL_NAME2 = 'contrastive_deform_best'
-MODEL_NAME3 = 'new_loss_deform_best'
+MODEL_NAME2 = None
+MODEL_NAME3 = None
 MODEL_LABEL = 'Triplet Loss'
-MODEL_LABEL2 = 'MC Loss'
-MODEL_LABEL3 = 'Experimental Loss'
+MODEL_LABEL2 = None
+MODEL_LABEL3 = None
 MODEL_EXTENSION = '.pkl'
 
 def test(dataloader, model, args, device, name = MODEL_NAME):
