@@ -1,79 +1,58 @@
 import torch.utils.data as data
 import numpy as np
-from utils.utils import process_feat
 import torch
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+import random
+#torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_float32_matmul_precision('medium')
 import option
 args=option.parse_args()
 
 classes = ["Normal", "Abuse", "Arrest", "Arson", "Assault", "Burglary", "Explosion", "Fighting", "RoadAccidents", "Robbery", "Shooting", "Shoplifting", "Stealing", "Vandalism"]
 
 class Dataset(data.Dataset):
-    def __init__(self, args, is_normal=True, transform=None, test_mode=False, is_preprocessed=False):
-        self.modality = args.modality
-        self.is_normal = is_normal
+    def __init__(self, args, test_mode=False):
         if test_mode:
             self.rgb_list_file = args.test_rgb_list
         else:
             self.rgb_list_file = args.rgb_list
-        self.tranform = transform
-        self.test_mode = test_mode
-        self.num_frame = 0
-        self.labels = None
-        self.is_preprocessed = args.preprocessed
-        self._parse_list()
 
-    def _parse_list(self):
+        self.test_mode = test_mode
         self.list = list(open(self.rgb_list_file))
-        if self.test_mode is False:
-            if args.datasetname == 'UCF':
-                if self.is_normal:
-                    self.list = self.list[810:] # self.list[810:]
-                    #print('normal list')
-                    #print(self.list)
-                else:
-                    self.list = self.list[:810]
-                    #print('abnormal list')
-                    #print(self.list)
 
     def __getitem__(self, index):
-        label = self.get_label(index)  # get video level label 0/1
-        features = np.load(self.list[index].strip('\n'), allow_pickle=True)
-        features = np.array(features, dtype=np.float32)
-        name = self.list[index].split('/')[-1].strip('\n')[:-4]
-        
-        if self.tranform is not None:
-            features = self.tranform(features)
+        if not self.test_mode:
+            if index == 0:
+                self.n_ind = list(range(810, len(self.list)))
+                self.a_ind = list(range(810))
+                random.shuffle(self.n_ind)
+                random.shuffle(self.a_ind)
 
-        if self.test_mode:
-            if "Normal" not in name:
-                label = torch.tensor(1.0)
+            nindex = self.n_ind.pop()
+            aindex = self.a_ind.pop()
 
-        if self.is_preprocessed:
-            return features, label
-        
-        features = features.transpose(1, 0, 2)  # [10, T, F]
-        divided_features = []
+            path = self.list[nindex].strip('\n')
+            nfeatures = np.load(path, allow_pickle=True)
+            nfeatures = np.array(nfeatures, dtype=np.float32)
+            
+            # if random.random() < 0.5:
+            #      nfeatures = nfeatures[::-1].copy()
+            nlabel = 0.0 if "Normal" in path else 1.0
 
-        divided_mag = []
-        for feature in features:
-            feature = process_feat(feature, args.seg_length) #ucf(32,2048)
-            divided_features.append(feature)
-            divided_mag.append(np.linalg.norm(feature, axis=1)[:, np.newaxis])
-        divided_features = np.array(divided_features, dtype=np.float32)
-        divided_mag = np.array(divided_mag, dtype=np.float32)
-        divided_features = np.concatenate((divided_features,divided_mag),axis = 2)
-        return divided_features, label, self.get_type(index)
+            path = self.list[aindex].strip('\n')
+            afeatures = np.load(path, allow_pickle=True)
+            afeatures = np.array(afeatures, dtype=np.float32)
+            
+            # if random.random() < 0.5:
+            #      afeatures = afeatures[::-1].copy()
+            alabel = 0.0 if "Normal" in path else 1.0
 
-    def get_label(self, index):
-        if self.is_normal:
-        #if "Normal" in self.list[index]:
-            # label[0] = 1
-            label = torch.tensor(0.0)
+            return nfeatures, nlabel, afeatures, alabel
+    
         else:
-            label = torch.tensor(1.0)
-            # label[1] = 1
-        return label
+            path = self.list[index].strip('\n')
+            features = np.load(path, allow_pickle=True)
+            label = 0.0 if "Normal" in path else 1.0
+            return features, label, self.get_type(index)
 
     def get_type(self, index):
         for i, atype in enumerate(classes):
@@ -83,8 +62,7 @@ class Dataset(data.Dataset):
 
     def __len__(self):
 
-        return len(self.list)
-
-
-    def get_num_frames(self):
-        return self.num_frame
+        if self.test_mode:
+            return len(self.list)
+        else:
+            return 800

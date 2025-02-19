@@ -4,7 +4,7 @@ import torch
 from tqdm import tqdm
 args=option.parse_args()
 from config import *
-from models.mgfn import mgfn as Model
+from MGFN.models.model import mgfn as Model
 from datasets.dataset import Dataset
 import time
 import gradio as gr
